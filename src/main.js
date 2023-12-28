@@ -2,6 +2,10 @@
 import * as THREE from "three"
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls'
 
+// Set up animation parameters
+let speedX = 0.05;
+let speedY = 0.03;
+
 //create scene
  const scene = new THREE.Scene()
 
@@ -59,7 +63,20 @@ window.addEventListener('resize', () => {
 })
 
 const loop = () => {
-    controls.update()
+    //controls.update()
+
+    // Update sphere position
+    mesh.position.x += speedX;
+    mesh.position.y += speedY;
+
+    // Bounce off the walls
+    if (mesh.position.x > 4 || mesh.position.x < -4) {
+        speedX *= -1;
+    }
+
+    if (mesh.position.y > 4 || mesh.position.y < -4) {
+        speedY *= -1;
+    }
     renderer.render(scene, camera)
     window.requestAnimationFrame(loop)
 }
