@@ -1,6 +1,9 @@
  import { render } from "react-dom"
 import * as THREE from "three"
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls'
+import { createSphere } from "./createSphere";
+import { createPhysicsWorld } from "./physics";
+import * as CANNON from 'cannon';
 
 // Set up animation parameters
 let speedX = 0.05;
@@ -9,13 +12,12 @@ let speedY = 0.03;
 //create scene
  const scene = new THREE.Scene()
 
+//create Physics world
+const world = createPhysicsWorld()
+
 //create sphere
- const geometry = new THREE.SphereGeometry(3,64,64)
- const material = new THREE.MeshStandardMaterial({
-    color:"#00ff83",
- })
- const mesh = new THREE.Mesh(geometry,material)
- scene.add(mesh)
+ const sphere = createSphere(1,world)
+ scene.add(sphere.mesh)
 
 //size
 const size = {
@@ -62,21 +64,46 @@ window.addEventListener('resize', () => {
     renderer.setSize(size.width, size.height)
 })
 
+
+const groundGEo = new THREE.PlaneGeometry(15,15)
+const groundMat = new THREE.MeshBasicMaterial({
+    color:0xffffff,
+    side: THREE.DoubleSide,
+    wireframe:true
+})
+const groundMesh =new THREE.Mesh(groundGEo, groundMat)
+scene.add(groundMesh)
+
+const groundPhysMat = new CANNON.Material()
+
+const groundBody = new CANNON.Body({
+    shape: new CANNON.Plane(),
+    type: CANNON.Body.STATIC,
+    material:groundPhysMat,
+    position:new CANNON.Vec3(0, -5, 0)
+})
+world.addBody(groundBody)
+groundBody.quaternion.setFromEuler(-Math.PI / 2,0,0)
+
+const groundSphereContactMat = new CANNON.ContactMaterial(
+    sphere.phyMat,
+    groundPhysMat,
+    {restitution: 0.9}
+)
+
+world.addContactMaterial(groundSphereContactMat)
+
+const timestep = 1/60
+
 const loop = () => {
     //controls.update()
 
-    // Update sphere position
-    mesh.position.x += speedX;
-    mesh.position.y += speedY;
+    world.step(timestep)
+    groundMesh.position.copy(groundBody.position)
+    groundMesh.quaternion.copy(groundBody.quaternion)
 
-    // Bounce off the walls
-    if (mesh.position.x > 4 || mesh.position.x < -4) {
-        speedX *= -1;
-    }
+    sphere.update()
 
-    if (mesh.position.y > 4 || mesh.position.y < -4) {
-        speedY *= -1;
-    }
     renderer.render(scene, camera)
     window.requestAnimationFrame(loop)
 }
