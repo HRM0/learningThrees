@@ -2,7 +2,7 @@
 import * as THREE from "three"
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls'
 import { createSphere, createPhysicsWorld } from "./createSphere";
-import { createWall } from "./createBoard";
+import { createBoard, createWall } from "./createBoard";
 import * as CANNON from 'cannon';
 
 // Set up animation parameters
@@ -16,12 +16,13 @@ let speedY = 0.03;
 const world = createPhysicsWorld()
 
 //create sphere
- const sphere = createSphere({
-    radius:1,
+const spheres = [createSphere({
+    radius:.5,
     world:world,
+    scene:scene,
     location: { x: 0, y: -4, z: 0 }
-})
- scene.add(sphere.mesh)
+})]
+ 
 
 //size
 const size = {
@@ -40,7 +41,6 @@ scene.add(light)
     size.width/size.height
 )
  camera.position.z = 50
- camera.position.y = 10
  scene.add(camera)
 
  //renderer
@@ -69,36 +69,51 @@ window.addEventListener('resize', () => {
     renderer.setSize(size.width, size.height)
 })
 
-//create wall
-const bottom = createWall({
-    world:world,
-    rotation: { x: -Math.PI / 2, y: 0, z: 0 },
-    location: { x: 0, y: -10, z: 0 }
+//creating the board and adding physics
+const addContact = (obj1, obj2, restitution ) => {
+    world.addContactMaterial(new CANNON.ContactMaterial(
+        obj1,
+        obj2,
+        {restitution: restitution}
+    ))
+}
+
+const board = createBoard(scene,world)
+addContact(spheres[0].phyMat,spheres[0].phyMat,1)
+spheres.forEach((sphere) => {
+    Object.entries(board).forEach( ([key,value]) => {
+        addContact(sphere.phyMat, board[key].phyMat, 1)
+    })
 })
-scene.add(bottom.mesh)
 
-//create wall
-const top = createWall({
-    world:world,
-    rotation: { x: Math.PI / 2, y: 0, z: 0 },
-    location: { x: 0, y: 10, z: 0 }
+const mouse =new THREE.Vector2()
+const intersectionPoint = new THREE.Vector3()
+const planeNormal = new THREE.Vector3()
+const plane = new THREE.Plane()
+const raycaster = new THREE.Raycaster()
+
+window.addEventListener('mousemove', function(e) {
+    mouse.x = (e.clientX/window.innerWidth) * 2 -1,
+    mouse.y = (e.clientY/window.innerHeight) * 2 + 1
+    planeNormal.copy(camera.position).normalize()
+    plane.setFromNormalAndCoplanarPoint(planeNormal, scene.position)
+    raycaster.setFromCamera(mouse, camera)
+    raycaster.ray.intersectPlane(plane, intersectionPoint)
 })
-scene.add(top.mesh)
 
-const groundSphereContactMat = new CANNON.ContactMaterial(
-    sphere.phyMat,
-    bottom.phyMat,
-    {restitution: 1}
-)
-
-const roofSphereContactMat = new CANNON.ContactMaterial(
-    sphere.phyMat,
-    top.phyMat,
-    {restitution: 1}
-)
-
-world.addContactMaterial(groundSphereContactMat)
-world.addContactMaterial(roofSphereContactMat)
+window.addEventListener('click', function(e) {
+    console.log("click")
+    const newSphere = createSphere({
+        radius:.5,
+        world:world,
+        scene:scene,
+        location: { x: 0, y: -4, z: 0 }
+    })
+    Object.entries(board).forEach( ([key,value]) => {
+        addContact(newSphere.phyMat, board[key].phyMat, 1)
+    })
+    spheres.push(newSphere)
+})
 
 const timestep = 1/60
 
@@ -106,9 +121,13 @@ const loop = () => {
     //controls.update()
 
     world.step(timestep)
-    sphere.update()
-    bottom.update()
-    top.update()
+    spheres.forEach((sphere) => {
+        sphere.update()
+    })
+    board.bottom.update()
+    board.top.update()
+    board.left.update()
+    board.right.update()
     
     renderer.render(scene, camera)
     window.requestAnimationFrame(loop)
