@@ -1,8 +1,8 @@
  import { render } from "react-dom"
 import * as THREE from "three"
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls'
-import { createSphere } from "./createSphere";
-import { createPhysicsWorld } from "./physics";
+import { createSphere, createPhysicsWorld } from "./createSphere";
+import { createWall } from "./createBoard";
 import * as CANNON from 'cannon';
 
 // Set up animation parameters
@@ -16,7 +16,11 @@ let speedY = 0.03;
 const world = createPhysicsWorld()
 
 //create sphere
- const sphere = createSphere(1,world)
+ const sphere = createSphere({
+    radius:1,
+    world:world,
+    location: { x: 0, y: -4, z: 0 }
+})
  scene.add(sphere.mesh)
 
 //size
@@ -35,7 +39,8 @@ scene.add(light)
     45,
     size.width/size.height
 )
- camera.position.z = 20
+ camera.position.z = 50
+ camera.position.y = 10
  scene.add(camera)
 
  //renderer
@@ -64,34 +69,36 @@ window.addEventListener('resize', () => {
     renderer.setSize(size.width, size.height)
 })
 
-
-const groundGEo = new THREE.PlaneGeometry(15,15)
-const groundMat = new THREE.MeshBasicMaterial({
-    color:0xffffff,
-    side: THREE.DoubleSide,
-    wireframe:true
+//create wall
+const bottom = createWall({
+    world:world,
+    rotation: { x: -Math.PI / 2, y: 0, z: 0 },
+    location: { x: 0, y: -10, z: 0 }
 })
-const groundMesh =new THREE.Mesh(groundGEo, groundMat)
-scene.add(groundMesh)
+scene.add(bottom.mesh)
 
-const groundPhysMat = new CANNON.Material()
-
-const groundBody = new CANNON.Body({
-    shape: new CANNON.Plane(),
-    type: CANNON.Body.STATIC,
-    material:groundPhysMat,
-    position:new CANNON.Vec3(0, -5, 0)
+//create wall
+const top = createWall({
+    world:world,
+    rotation: { x: Math.PI / 2, y: 0, z: 0 },
+    location: { x: 0, y: 10, z: 0 }
 })
-world.addBody(groundBody)
-groundBody.quaternion.setFromEuler(-Math.PI / 2,0,0)
+scene.add(top.mesh)
 
 const groundSphereContactMat = new CANNON.ContactMaterial(
     sphere.phyMat,
-    groundPhysMat,
-    {restitution: 0.9}
+    bottom.phyMat,
+    {restitution: 1}
+)
+
+const roofSphereContactMat = new CANNON.ContactMaterial(
+    sphere.phyMat,
+    top.phyMat,
+    {restitution: 1}
 )
 
 world.addContactMaterial(groundSphereContactMat)
+world.addContactMaterial(roofSphereContactMat)
 
 const timestep = 1/60
 
@@ -99,11 +106,10 @@ const loop = () => {
     //controls.update()
 
     world.step(timestep)
-    groundMesh.position.copy(groundBody.position)
-    groundMesh.quaternion.copy(groundBody.quaternion)
-
     sphere.update()
-
+    bottom.update()
+    top.update()
+    
     renderer.render(scene, camera)
     window.requestAnimationFrame(loop)
 }
