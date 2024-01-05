@@ -1,7 +1,7 @@
  import { render } from "react-dom"
 import * as THREE from "three"
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls'
-import { createSphere, createPhysicsWorld } from "./createSphere";
+import { createSphere, createPhysicsWorld, createBox } from "./createSphere";
 import { createBoard, createWall } from "./createBoard";
 import * as CANNON from 'cannon';
 
@@ -23,6 +23,8 @@ const spheres = [createSphere({
     location: { x: 0, y: -4, z: 0 }
 })]
  
+//create box array
+const walls = []
 
 //size
 const size = {
@@ -79,7 +81,7 @@ const addContact = (obj1, obj2, restitution ) => {
 }
 
 const board = createBoard(scene,world)
-addContact(spheres[0].phyMat,spheres[0].phyMat,1)
+
 spheres.forEach((sphere) => {
     Object.entries(board).forEach( ([key,value]) => {
         addContact(sphere.phyMat, board[key].phyMat, 1)
@@ -94,25 +96,40 @@ const raycaster = new THREE.Raycaster()
 
 window.addEventListener('mousemove', function(e) {
     mouse.x = (e.clientX/window.innerWidth) * 2 -1,
-    mouse.y = (e.clientY/window.innerHeight) * 2 + 1
+    mouse.y = -(e.clientY/window.innerHeight) * 2 + 1
     planeNormal.copy(camera.position).normalize()
     plane.setFromNormalAndCoplanarPoint(planeNormal, scene.position)
     raycaster.setFromCamera(mouse, camera)
     raycaster.ray.intersectPlane(plane, intersectionPoint)
 })
+// create new spheres and add collision
+// const newSphere = createSphere({
+//     radius:.5,
+//     world:world,
+//     scene:scene,
+//     location: { x: 0, y: -4, z: 0 }
+// })
+// spheres.forEach((sphere) => {
+//     addContact(newSphere.phyMat, sphere.phyMat, 1)
+// })
+// Object.entries(board).forEach( ([key,value]) => {
+//     addContact(newSphere.phyMat, board[key].phyMat, 1)
+// })
+// spheres.push(newSphere)
+
 
 window.addEventListener('click', function(e) {
     console.log("click")
-    const newSphere = createSphere({
-        radius:.5,
+    const newWall = createBox({
         world:world,
         scene:scene,
-        location: { x: 0, y: -4, z: 0 }
+        position: intersectionPoint
     })
-    Object.entries(board).forEach( ([key,value]) => {
-        addContact(newSphere.phyMat, board[key].phyMat, 1)
+    spheres.forEach((sphere) => {
+        addContact(newWall.phyMat, sphere.phyMat, 1)
     })
-    spheres.push(newSphere)
+
+    walls.push(newWall)
 })
 
 const timestep = 1/60
@@ -122,6 +139,9 @@ const loop = () => {
 
     world.step(timestep)
     spheres.forEach((sphere) => {
+        sphere.update()
+    })
+    walls.forEach((sphere) => {
         sphere.update()
     })
     board.bottom.update()
