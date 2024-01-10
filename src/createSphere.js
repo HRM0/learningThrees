@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import * as CANNON from 'cannon'; // Import Cannon.js
+import * as CANNON from 'cannon-es';// Import Cannon.js
 
 export const createPhysicsWorld = () => {
   const world = new CANNON.World();

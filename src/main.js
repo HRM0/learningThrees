@@ -3,7 +3,7 @@ import * as THREE from "three"
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls'
 import { createSphere, createPhysicsWorld, createBox } from "./createSphere";
 import { createBoard, createWall } from "./createBoard";
-import * as CANNON from 'cannon';
+import * as CANNON from 'cannon-es';
 
 // Set up animation parameters
 let speedX = 0.05;

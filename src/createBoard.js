@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import * as CANNON from 'cannon'; // Import Cannon.js
+import * as CANNON from 'cannon-es'; // Import Cannon.js
 
 export const createWall = ({world, rotation, location, length, height}) => {
     const groundGEo = new THREE.PlaneGeometry(length,height)
